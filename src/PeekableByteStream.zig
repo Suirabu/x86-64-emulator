@@ -50,3 +50,7 @@ pub fn peekInt(self: *Self, comptime T: type) !T {
     // assume native-endian
     return mem.readIntNative(T, buffer);
 }
+
+pub fn getPosition(self: Self) usize {
+    return self.cursor;
+}

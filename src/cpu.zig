@@ -1,6 +1,7 @@
 const std = @import("std");
 const elf = std.elf;
 const mem = std.mem;
+const os = std.os;
 
 const x86 = @import("x86.zig");
 const Instruction = x86.Instruction;
@@ -73,6 +74,16 @@ pub const Cpu = struct {
     pub fn syscall(self: *Self) !void {
         const rax = self.registers[0];
         switch (rax) {
+            0x01 => {
+                const fd: os.system.fd_t = @intCast(self.registers[7]);
+                const buffer_offset = self.registers[6];
+                const length = self.registers[2];
+
+                const buffer = self.memory[buffer_offset .. buffer_offset + length];
+
+                // move result into rax
+                self.registers[0] = try os.write(fd, buffer);
+            },
             0x3C => {
                 self.is_running = false;
                 self.exit_code = @truncate(self.registers[7]); // rdi
