@@ -2,10 +2,11 @@ const std = @import("std");
 const PeekableByteStream = @import("PeekableByteStream.zig");
 
 pub const Instruction = struct {
-    prefix: ?u8 = null,
     primary_opcode: u8,
-    register: u4 = 0,
-    immediate: u32 = 0,
+    secondary_opcode: u8 = undefined,
+
+    register: u4 = undefined,
+    immediate: u32 = undefined,
     length: u8,
 
     pub fn fromBytes(bytes: []const u8) !Instruction {
@@ -28,8 +29,8 @@ pub const Instruction = struct {
             _ = try bs.readByte();
             if (try bs.peekByte() == 0x05) {
                 return Instruction{
-                    .prefix = 0x0F,
-                    .primary_opcode = try bs.readByte(),
+                    .primary_opcode = 0x0F,
+                    .secondary_opcode = try bs.readByte(),
                     .length = 2,
                 };
             }

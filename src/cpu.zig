@@ -57,17 +57,14 @@ pub const Cpu = struct {
     pub fn tick(self: *Self) !void {
         const instruction = try Instruction.fromBytes(self.memory[self.ip..]);
 
-        if (instruction.prefix) |_| {
-            switch (instruction.primary_opcode) {
-                // syscall
+        switch (instruction.primary_opcode) {
+            // must have secondary opcode
+            0x0F => switch (instruction.secondary_opcode) {
                 0x05 => try self.syscall(),
                 else => unreachable,
-            }
-        } else {
-            switch (instruction.primary_opcode) {
-                0xB8 => self.registers[instruction.register] = instruction.immediate,
-                else => unreachable,
-            }
+            },
+            0xB8 => self.registers[instruction.register] = instruction.immediate,
+            else => unreachable,
         }
 
         self.ip += instruction.length;
