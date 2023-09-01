@@ -1,4 +1,5 @@
 const std = @import("std");
+const PeekableByteStream = @import("PeekableByteStream.zig");
 
 pub const Instruction = struct {
     prefix: ?u8 = null,
@@ -8,36 +9,35 @@ pub const Instruction = struct {
     length: u8,
 
     pub fn fromBytes(bytes: []const u8) !Instruction {
-        var fbs = std.io.fixedBufferStream(bytes);
-        var reader = fbs.reader();
-
-        var byte = try reader.readByte();
+        var bs = PeekableByteStream.from(bytes);
 
         // mov immediate word/dword
-        if (byte & 0xF8 == 0xB8) {
+        if (try bs.peekByte() & 0xF8 == 0xB8) {
+            const opcode_byte = try bs.readByte();
+
             return Instruction{
-                .primary_opcode = byte & 0xF8,
-                .register = @truncate(byte & 0x07),
-                .immediate = try reader.readIntNative(u32),
+                .primary_opcode = opcode_byte & 0xF8,
+                .register = @truncate(opcode_byte & 0x07),
+                .immediate = try bs.readInt(u32),
                 .length = 5,
             };
         }
 
         // prefix byte
-        if (byte == 0x0F) {
-            byte = try reader.readByte();
-            if (byte == 0x05) {
+        if (try bs.peekByte() == 0x0F) {
+            _ = try bs.readByte();
+            if (try bs.peekByte() == 0x05) {
                 return Instruction{
                     .prefix = 0x0F,
-                    .primary_opcode = byte,
+                    .primary_opcode = try bs.readByte(),
                     .length = 2,
                 };
             }
 
-            std.log.err("opcode 0F {X} is currently unimplemented", .{byte});
+            std.log.err("opcode {X} is currently unimplemented", .{try bs.readByte()});
         }
 
-        std.log.err("opcode {X} is currently unimplemented", .{byte});
+        std.log.err("opcode {X} is currently unimplemented", .{try bs.readByte()});
         return error.UnimplementedOpcode;
     }
 };
