@@ -64,7 +64,13 @@ pub const Cpu = struct {
                 0x05 => try self.syscall(),
                 else => unreachable,
             },
-            0xB8 => self.registers[instruction.register] = instruction.immediate,
+            0x8B => {
+                self.registers[instruction.register] = switch (instruction.source) {
+                    .register => |register_index| self.registers[register_index],
+                    else => unreachable,
+                };
+            },
+            0xB8 => self.registers[instruction.register] = instruction.source.immediate,
             else => unreachable,
         }
 
