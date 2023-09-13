@@ -12,6 +12,7 @@ pub const Cpu = struct {
     memory: []const u8,
     ip: usize,
     registers: [16]u64,
+    flags: Flags,
 
     is_running: bool,
     exit_code: u8,
@@ -21,6 +22,7 @@ pub const Cpu = struct {
             .memory = try allocator.alloc(u8, memory),
             .ip = undefined,
             .registers = undefined,
+            .flags = undefined,
             .is_running = true,
             .exit_code = undefined,
         };
@@ -61,15 +63,37 @@ pub const Cpu = struct {
         switch (instruction.primary_opcode) {
             // must have secondary opcode
             0x0F => switch (instruction.secondary_opcode) {
+                // syscall
                 0x05 => try self.syscall(),
+                0x8C => if (!self.flags.zero and self.flags.carry) {
+                    self.ip += instruction.source.immediate;
+                },
                 else => unreachable,
             },
+            // cmp
+            0x83 => {
+                self.flags.carry = false;
+                self.flags.zero = false;
+                var dest_value = self.registers[instruction.register];
+                var src_value = switch (instruction.source) {
+                    .register => |register_index| self.registers[register_index],
+                    else => instruction.source.asInt(),
+                };
+                if (dest_value == src_value) {
+                    self.flags.zero = true;
+                }
+                if (dest_value < src_value) {
+                    self.flags.carry = true;
+                }
+            },
+            // mov reg, [base]
             0x8B => {
                 self.registers[instruction.register] = switch (instruction.source) {
                     .register => |register_index| self.registers[register_index],
                     else => unreachable,
                 };
             },
+            // mov reg, immediate
             0xB8 => self.registers[instruction.register] = instruction.source.immediate,
             else => unreachable,
         }
@@ -100,4 +124,15 @@ pub const Cpu = struct {
             },
         }
     }
+};
+
+const Flags = packed struct(u32) {
+    carry: bool,
+    _0: u1, // padding
+    parity: bool,
+    _1: u1, // padding
+    auxiliary_carry: bool,
+    _2: u1, // padding
+    zero: bool,
+    _3: u25,
 };

@@ -46,9 +46,14 @@ pub const Instruction = struct {
             0x0F => {
                 instruction.primary_opcode = try bs.readByte();
 
-                // syscall
                 switch (try bs.peekByte()) {
+                    // syscall
                     0x05 => instruction.secondary_opcode = try bs.readByte(),
+                    // jl/jnge
+                    0x8c => {
+                        instruction.secondary_opcode = try bs.readByte();
+                        instruction.source = Source{ .immediate = try bs.readInt(u32) };
+                    },
                     else => return opcodeUnimplemented(try bs.readByte()),
                 }
             },
@@ -67,6 +72,17 @@ pub const Instruction = struct {
                         else => unreachable,
                     }
                 }
+            },
+            // cmp
+            0x83 => {
+                instruction.primary_opcode = try bs.readByte();
+                // ModR/M byte
+                const mod_rm_byte = try bs.readByte();
+                instruction.register = @truncate((mod_rm_byte & 0x38) >> 3);
+                if (mod_rm_byte & 0xC0 == 0xC0) {
+                    instruction.register = @truncate(mod_rm_byte & 0x07);
+                }
+                instruction.source = Source{ .immediate = try bs.readByte() };
             },
             else => return opcodeUnimplemented(try bs.readByte()),
         }
@@ -102,4 +118,12 @@ const Source = union(enum) {
     register: u4,
     address: u64,
     immediate: u64,
+
+    pub fn asInt(self: Source) u64 {
+        return switch (self) {
+            .address => |val| val,
+            .immediate => |val| val,
+            .register => unreachable,
+        };
+    }
 };
