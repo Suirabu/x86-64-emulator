@@ -4,8 +4,7 @@ const mem = std.mem;
 const os = std.os;
 const system = os.system;
 
-const x86 = @import("x86.zig");
-const Instruction = x86.Instruction;
+const Instruction = @import("Instruction.zig");
 
 const Self = @This();
 
