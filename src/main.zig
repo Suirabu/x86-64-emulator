@@ -1,7 +1,6 @@
 const std = @import("std");
-const elf = std.elf;
 
-const Cpu = @import("cpu.zig").Cpu;
+const Cpu = @import("Cpu.zig");
 
 pub fn main() !u8 {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
