@@ -62,6 +62,7 @@ pub const Cpu = struct {
         switch (instruction.primary_opcode) {
             // must have secondary opcode
             0x0F => switch (instruction.secondary_opcode) {
+                // syscall
                 0x05 => try self.syscall(),
 
                 else => unreachable, // unimplemented instruction
@@ -81,34 +82,49 @@ pub const Cpu = struct {
                     },
                 }
             },
+
+            // mov immediate
             0xB8 => self.registers[instruction.register] = instruction.immediate,
-            else => unreachable,
+
+            else => unreachable, // unimplemented instruction
         }
 
         self.ip += instruction.length;
     }
 
     pub fn syscall(self: *Self) !void {
-        const rax = self.registers[0];
-        switch (rax) {
+        switch (self.registers[rax]) {
+            // write
             0x01 => {
-                const fd: os.system.fd_t = @intCast(self.registers[7]);
-                const buffer_offset = self.registers[6];
-                const length = self.registers[2];
+                const fd: system.fd_t = @intCast(self.registers[rdi]);
+                const buffer_offset = self.registers[rsi];
+                const length = self.registers[rdx];
 
                 const buffer = self.memory[buffer_offset .. buffer_offset + length];
-
-                // move result into rax
-                self.registers[0] = try os.write(fd, buffer);
+                self.registers[rax] = try os.write(fd, buffer);
             },
+
+            // exit
             0x3C => {
                 self.is_running = false;
-                self.exit_code = @truncate(self.registers[7]); // rdi
+                self.exit_code = @truncate(self.registers[rdi]);
             },
-            else => {
-                std.log.err("syscall {d} unimplemented", .{rax});
+
+            // unimplemented
+            else => |syscall_number| {
+                std.log.err("syscall {d} unimplemented", .{syscall_number});
                 return error.UnimplementedSyscall;
             },
         }
     }
 };
+
+// Register indices
+const rax = 0;
+const rcx = 1;
+const rdx = 2;
+const rbx = 3;
+const rsp = 4;
+const rbp = 5;
+const rsi = 6;
+const rdi = 7;
