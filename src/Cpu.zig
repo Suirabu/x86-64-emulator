@@ -6,7 +6,7 @@ const system = os.system;
 
 const Instruction = @import("Instruction.zig");
 
-const Self = @This();
+const Cpu = @This();
 
 // register indices
 const rax = 0;
@@ -25,8 +25,8 @@ registers: [16]u64,
 is_running: bool,
 exit_code: u8,
 
-pub fn init(memory: usize, allocator: mem.Allocator) !Self {
-    return Self{
+pub fn init(memory: usize, allocator: mem.Allocator) !Cpu {
+    return Cpu{
         .memory = try allocator.alloc(u8, memory),
         .ip = undefined,
         .registers = undefined,
@@ -35,11 +35,11 @@ pub fn init(memory: usize, allocator: mem.Allocator) !Self {
     };
 }
 
-pub fn deinit(self: Self, allocator: mem.Allocator) void {
+pub fn deinit(self: Cpu, allocator: mem.Allocator) void {
     allocator.free(self.memory);
 }
 
-pub fn loadElfExecutable(self: *Self, source: []const u8) !void {
+pub fn loadElfExecutable(self: *Cpu, source: []const u8) !void {
     // parse ELF header
     var parse_source = std.io.fixedBufferStream(source);
     var ehdr = try elf.Header.read(&parse_source);
@@ -58,13 +58,13 @@ pub fn loadElfExecutable(self: *Self, source: []const u8) !void {
     self.ip = ehdr.entry;
 }
 
-pub fn run(self: *Self) !void {
+pub fn run(self: *Cpu) !void {
     while (self.is_running) {
         try self.tick();
     }
 }
 
-pub fn tick(self: *Self) !void {
+pub fn tick(self: *Cpu) !void {
     const instruction = try Instruction.fromBytes(self.memory[self.ip..]);
 
     switch (instruction.primary_opcode) {
@@ -100,7 +100,7 @@ pub fn tick(self: *Self) !void {
     self.ip += instruction.length;
 }
 
-pub fn syscall(self: *Self) !void {
+pub fn syscall(self: *Cpu) !void {
     switch (self.registers[rax]) {
         // write
         0x01 => {
