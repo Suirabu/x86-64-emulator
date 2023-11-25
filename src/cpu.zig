@@ -2,6 +2,7 @@ const std = @import("std");
 const elf = std.elf;
 const mem = std.mem;
 const os = std.os;
+const system = os.system;
 
 const x86 = @import("x86.zig");
 const Instruction = x86.Instruction;
@@ -62,7 +63,23 @@ pub const Cpu = struct {
             // must have secondary opcode
             0x0F => switch (instruction.secondary_opcode) {
                 0x05 => try self.syscall(),
-                else => unreachable,
+
+                else => unreachable, // unimplemented instruction
+            },
+
+            // imul reg, byte
+            0x6B => self.registers[instruction.register] *= instruction.immediate,
+
+            // arithmetic
+            0x83 => {
+                switch (instruction.secondary_opcode) {
+                    // add
+                    0 => self.registers[instruction.register] += instruction.immediate,
+                    else => |arith_specififer| {
+                        std.log.err("arithmetic operand specifier {d} unimplemented", .{arith_specififer});
+                        return error.UnimplementedArithmeticOperation;
+                    },
+                }
             },
             0xB8 => self.registers[instruction.register] = instruction.immediate,
             else => unreachable,

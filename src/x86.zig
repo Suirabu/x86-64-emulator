@@ -52,6 +52,21 @@ pub const Instruction = struct {
                     else => return opcodeUnimplemented(try bs.readByte()),
                 }
             },
+            // imul reg, byte
+            0x6B => {
+                instruction.primary_opcode = try bs.readByte();
+                const mod_rm_byte = try bs.readByte();
+                instruction.register = @as(u3, @truncate(mod_rm_byte >> 3));
+                instruction.immediate = try bs.readByte();
+            },
+            // arithmetic
+            0x83 => {
+                instruction.primary_opcode = try bs.readByte();
+                const mod_rm_byte = try bs.readByte();
+                instruction.secondary_opcode = @as(u3, @truncate(mod_rm_byte >> 3));
+                instruction.register = @as(u3, @truncate(mod_rm_byte));
+                instruction.immediate = try bs.readByte();
+            },
             else => return opcodeUnimplemented(try bs.readByte()),
         }
 
